@@ -45,12 +45,12 @@
         if (code) {
             // Store the code temporarily
             localStorage.setItem('discord_code', code);
-            // Redirect to home page
+            // Redirect to home page with correct path
             window.location.href = '/ghosttown/home.html';
         } else {
-            // If no code, redirect to login
+            // If no code, redirect to login with correct path
             window.location.href = '/ghosttown/index.html?error=no_code';
         }
     </script>
 </body>
-</html> 
+</html>
