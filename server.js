@@ -3,12 +3,6 @@ import session from 'express-session';
 import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 
 dotenv.config();
 
@@ -19,10 +13,6 @@ app.use(cors({
     origin: 'https://kill3rpall.github.io',
     credentials: true
 }));
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Session middleware
 app.use(session({
@@ -36,70 +26,33 @@ app.use(session({
 }));
 
 // Discord OAuth2 configuration
-const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_ID = '742443364091166793';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
 const REDIRECT_URI = 'https://ghosttown.up.railway.app/auth/discord/callback';
 
-
-// Update these constants at the top of your file
-const FRONTEND_URL = 'https://kill3rpall.github.io/ghosttown';
-const BACKEND_URL = 'https://ghosttown.up.railway.app';
-
-// Update the redirect URI
-// CORS configuration
-app.use(cors({
-    origin: 'https://kill3rpall.github.io',
-    credentials: true
-}));
-
-// Update the callback route
-app.get('/auth/discord/callback', async (req, res) => {
-    const { code } = req.query;
-    
-    if (!code) {
-        console.log('No code received');
-        return res.redirect(`${FRONTEND_URL}?error=no_code`);
-    }
-
-    try {
-        const params = new URLSearchParams({
-            client_id: DISCORD_CLIENT_ID,
-            client_secret: DISCORD_CLIENT_SECRET,
-            grant_type: 'authorization_code',
-            code: code,
-            redirect_uri: REDIRECT_URI
-        });
-
-        // Rest of your callback code...
-        
-        // Update redirect URLs
-        res.redirect(`${FRONTEND_URL}/home.html`);
-    } catch (error) {
-        console.error('Auth Error:', error);
-        res.redirect(`${FRONTEND_URL}?error=auth_failed`);
-    }
-});
-
-// Routes
+// Test route to verify server is running
 app.get('/', (req, res) => {
     res.send('Ghost Town Backend is running!');
 });
 
+// Discord login route - THIS IS THE IMPORTANT PART
 app.get('/auth/discord', (req, res) => {
+    console.log('Discord auth route hit');
     const params = new URLSearchParams({
         client_id: DISCORD_CLIENT_ID,
         redirect_uri: REDIRECT_URI,
         response_type: 'code',
         scope: 'identify email'
     });
-    res.redirect(`https://discord.com/api/oauth2/authorize?${params}`);
+    const discordUrl = `https://discord.com/api/oauth2/authorize?${params}`;
+    console.log('Redirecting to:', discordUrl);
+    res.redirect(discordUrl);
 });
 
+// Discord callback route
 app.get('/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
-    
     if (!code) {
-        console.log('No code received');
         return res.redirect('https://kill3rpall.github.io/ghosttown?error=no_code');
     }
 
@@ -108,11 +61,10 @@ app.get('/auth/discord/callback', async (req, res) => {
             client_id: DISCORD_CLIENT_ID,
             client_secret: DISCORD_CLIENT_SECRET,
             grant_type: 'authorization_code',
-            code: code,
+            code,
             redirect_uri: REDIRECT_URI
         });
 
-        console.log('Exchanging code for token...');
         const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
             method: 'POST',
             body: params,
@@ -120,33 +72,16 @@ app.get('/auth/discord/callback', async (req, res) => {
                 'Content-Type': 'application/x-www-form-urlencoded'
             }
         });
-
-        if (!tokenResponse.ok) {
-            const error = await tokenResponse.text();
-            console.error('Token Error:', error);
-            return res.redirect('https://kill3rpall.github.io/ghosttown?error=token_error');
-        }
-
         const tokens = await tokenResponse.json();
-        console.log('Token received');
 
         const userResponse = await fetch('https://discord.com/api/users/@me', {
             headers: {
                 Authorization: `Bearer ${tokens.access_token}`
             }
         });
-
-        if (!userResponse.ok) {
-            console.error('User Error:', await userResponse.text());
-            return res.redirect('https://kill3rpall.github.io/ghosttown?error=user_error');
-        }
-
         const user = await userResponse.json();
-        console.log('User data received:', user.username);
 
         req.session.user = user;
-        
-        // Send webhook
         await sendDiscordWebhook(user, req);
         
         res.redirect('https://kill3rpall.github.io/ghosttown/home.html');
@@ -154,66 +89,6 @@ app.get('/auth/discord/callback', async (req, res) => {
         console.error('Auth Error:', error);
         res.redirect('https://kill3rpall.github.io/ghosttown?error=auth_failed');
     }
-});
-
-// Webhook function
-async function sendDiscordWebhook(user, req) {
-    try {
-        const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
-        
-        const embed = {
-            title: '👤 تسجيل دخول جديد',
-            color: 0xff4500,
-            fields: [
-                {
-                    name: 'اسم المستخدم',
-                    value: user.username,
-                    inline: true
-                },
-                {
-                    name: 'معرف المستخدم',
-                    value: user.id,
-                    inline: true
-                },
-                {
-                    name: 'IP العنوان',
-                    value: req.ip,
-                    inline: true
-                },
-                {
-                    name: 'المتصفح',
-                    value: req.headers['user-agent'],
-                    inline: false
-                }
-            ],
-            thumbnail: {
-                url: `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
-            },
-            timestamp: new Date(),
-            footer: {
-                text: 'Ghost Town Login System'
-            }
-        };
-
-        await fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ embeds: [embed] })
-        });
-    } catch (error) {
-        console.error('Webhook Error:', error);
-    }
-}
-
-// Add this route to test if the server is running
-app.get('/test', (req, res) => {
-    res.json({
-        status: 'ok',
-        message: 'Ghost Town Backend is running!',
-        time: new Date().toISOString()
-    });
 });
 
 const PORT = process.env.PORT || 3000;
