@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authenticating...</title>
+</head>
+<body>
+    <script>
+        // Get the code from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (code) {
+            // Store the code temporarily
+            localStorage.setItem('discord_code', code);
+            // Redirect to home page
+            window.location.href = '/ghosttown/home.html';
+        } else {
+            // If no code, redirect to login
+            window.location.href = '/ghosttown/index.html?error=no_code';
+        }
+    </script>
+</body>
+</html> 

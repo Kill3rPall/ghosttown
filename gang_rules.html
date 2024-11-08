@@ -495,11 +495,11 @@
 </header>
 
 <nav>
-    <a href="home.html">الشاشة الرئيسية</a>
-    <a href="police_rules.html">قوانين الشرطة</a>
-    <a href="gang_rules.html">قوانين العصابات</a>
-    <a href="city_rules.html">قوانين المدينة</a>
-    <a href="safe_zones.html">المناطق الآمنة</a>
+    <a href="/ghosttown/home.html">الشاشة الرئيسية</a>
+    <a href="/ghosttown/police_rules.html">قوانين الشرطة</a>
+    <a href="/ghosttown/gang_rules.html">قوانين العصابات</a>
+    <a href="/ghosttown/city_rules.html">قوانين المدينة</a>
+    <a href="/ghosttown/safe_zones.html">المناطق الآمنة</a>
     <a href="https://ghostcfw.thta.shop/products" target="_blank">المتجر</a>
 </nav>
 
@@ -644,6 +644,15 @@
             console.error('Auth Error:', error);
             window.location.href = '/index.html?error=auth_required';
         });
+</script>
+
+<script>
+    // Check if we have a Discord code
+    const discordCode = localStorage.getItem('discord_code');
+    if (!discordCode) {
+        // No authentication, redirect to login
+        window.location.href = '/ghosttown/index.html?error=auth_required';
+    }
 </script>
 
 </html>
