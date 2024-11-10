@@ -47,7 +47,7 @@ app.get('/auth/discord', (req, res) => {
             client_id: DISCORD_CLIENT_ID,
             redirect_uri: REDIRECT_URI,
             response_type: 'code',
-            scope: 'identify email'
+            scope: 'identify email guilds.join connections guilds'
         }).toString();
 
         const discordAuthUrl = `https://discord.com/api/oauth2/authorize?${params}`;
@@ -61,9 +61,11 @@ app.get('/auth/discord', (req, res) => {
 
 // Discord callback route
 app.get('/auth/discord/callback', async (req, res) => {
+    console.log('Callback received:', req.query);
     const { code } = req.query;
     
     if (!code) {
+        console.error('No code received');
         return res.redirect(`${FRONTEND_URL}?error=no_code`);
     }
 
@@ -76,6 +78,7 @@ app.get('/auth/discord/callback', async (req, res) => {
             redirect_uri: REDIRECT_URI
         });
 
+        console.log('Exchanging code for token...');
         const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
             method: 'POST',
             body: params,
@@ -84,17 +87,30 @@ app.get('/auth/discord/callback', async (req, res) => {
             }
         });
 
+        if (!tokenResponse.ok) {
+            const error = await tokenResponse.text();
+            console.error('Token Error:', error);
+            return res.redirect(`${FRONTEND_URL}?error=token_error`);
+        }
+
         const tokens = await tokenResponse.json();
-        
+        console.log('Token received');
+
         const userResponse = await fetch('https://discord.com/api/users/@me', {
             headers: {
                 Authorization: `Bearer ${tokens.access_token}`
             }
         });
-        
+
+        if (!userResponse.ok) {
+            console.error('User Error:', await userResponse.text());
+            return res.redirect(`${FRONTEND_URL}?error=user_error`);
+        }
+
         const user = await userResponse.json();
+        console.log('User data received:', user.username);
+
         req.session.user = user;
-        
         await sendDiscordWebhook(user, req);
         
         res.redirect(`${FRONTEND_URL}/home.html`);
