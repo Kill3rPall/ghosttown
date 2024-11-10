@@ -566,7 +566,7 @@
         event.preventDefault();
         fetch('/auth/logout')
             .then(() => {
-                window.location.href = '/index.html';
+                window.location.href = 'https://kill3rpall.github.io/ghosttown/index.html';
             })
             .catch(error => console.error('Logout error:', error));
     }
@@ -656,12 +656,12 @@
         .then(user => {
             if (!user || user.error) {
                 // User is not logged in, redirect to login page
-                window.location.href = '/index.html?error=auth_required';
+                window.location.href = 'https://kill3rpall.github.io/ghosttown/index.html?error=auth_required';
             }
         })
         .catch(error => {
             console.error('Auth Error:', error);
-            window.location.href = '/index.html?error=auth_required';
+            window.location.href = 'https://kill3rpall.github.io/ghosttown/index.html?error=auth_required';
         });
 </script>
 
@@ -670,7 +670,7 @@
     const discordCode = localStorage.getItem('discord_code');
     if (!discordCode) {
         // No authentication, redirect to login
-        window.location.href = '/ghosttown/index.html?error=auth_required';
+        window.location.href = 'https://kill3rpall.github.io/ghosttown/index.html?error=auth_required';
     }
 </script>
 

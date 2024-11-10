@@ -1,70 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>جاري تسجيل الدخول...</title>
-    <meta charset="UTF-8">
-    <style>
-        body {
-            font-family: 'Tajawal', Arial, sans-serif;
-            background: linear-gradient(135deg, #1a1a1a, #2c2c2c);
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            direction: rtl;
-        }
-        .loading {
-            text-align: center;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            backdrop-filter: blur(10px);
-        }
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #ff4500;
-            border-top: 5px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <title>Authenticating...</title>
 </head>
 <body>
-    <div class="loading">
-        <div class="spinner"></div>
-        <p>جاري تسجيل الدخول عبر Discord...</p>
-    </div>
-
     <script>
-        // Get the code from URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-        const error = urlParams.get('error');
-        
-        if (error) {
-            // Handle error
-            console.error('Discord auth error:', error);
-            window.location.href = '/ghosttown/index.html';
-        } else if (code) {
-            // Store auth code
-            localStorage.setItem('discord_code', code);
-            localStorage.setItem('auth_time', Date.now());
+        // Get the access token from the URL
+        const fragment = new URLSearchParams(window.location.hash.slice(1));
+        const accessToken = fragment.get('access_token');
+
+        if (accessToken) {
+            // Store the token
+            localStorage.setItem('discord_token', accessToken);
             
-            // Redirect to home page
-            setTimeout(() => {
-                window.location.href = '/ghosttown/home.html';
-            }, 1000);
+            // Get user info from Discord
+            fetch('https://discord.com/api/users/@me', {
+                headers: {
+                    Authorization: `Bearer ${accessToken}`
+                }
+            })
+            .then(response => response.json())
+            .then(user => {
+                localStorage.setItem('discord_user', JSON.stringify(user));
+                window.location.href = 'https://kill3rpall.github.io/ghosttown/home.html';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                window.location.href = 'https://kill3rpall.github.io/ghosttown/index.html?error=auth_failed';
+            });
         } else {
-            // No code or error, redirect to login
-            window.location.href = '/ghosttown/index.html';
+            window.location.href = 'https://kill3rpall.github.io/ghosttown/index.html?error=no_token';
         }
     </script>
 </body>

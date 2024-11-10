@@ -17,8 +17,15 @@ const app = express();
 // Enable CORS
 app.use(cors({
     origin: 'https://kill3rpall.github.io',
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS']
 }));
+
+
+// Update OAuth2 configuration
+const FRONTEND_URL = 'https://kill3rpall.github.io/ghosttown';
+const BACKEND_URL = 'https://ghosttown.up.railway.app';
+const REDIRECT_URI = `${BACKEND_URL}/auth/discord/callback`;
 
 // Middleware
 app.use(express.json());
@@ -38,12 +45,10 @@ app.use(session({
 // Discord OAuth2 configuration
 const DISCORD_CLIENT_ID = '742443364091166793';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const REDIRECT_URI = 'https://ghosttown.up.railway.app/auth/discord/callback';
 
 
-// Update these constants at the top of your file
-const FRONTEND_URL = 'https://kill3rpall.github.io/ghosttown';
-const BACKEND_URL = 'https://ghosttown.up.railway.app';
+
+
 
 // Update the redirect URI
 // CORS configuration
@@ -57,28 +62,36 @@ app.get('/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
     
     if (!code) {
-        console.log('No code received');
         return res.redirect(`${FRONTEND_URL}?error=no_code`);
     }
 
     try {
-        const params = new URLSearchParams({
-            client_id: DISCORD_CLIENT_ID,
-            client_secret: DISCORD_CLIENT_SECRET,
-            grant_type: 'authorization_code',
-            code: code,
-            redirect_uri: REDIRECT_URI
-        });
-
-        // Rest of your callback code...
+        // ... rest of your callback code ...
         
-        // Update redirect URLs
+        // Update success redirect
         res.redirect(`${FRONTEND_URL}/home.html`);
     } catch (error) {
         console.error('Auth Error:', error);
         res.redirect(`${FRONTEND_URL}?error=auth_failed`);
     }
 });
+
+        // Rest of your callback code...
+        // Add user info endpoint
+app.get('/api/user', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    res.json(req.session.user);
+});
+
+// Add logout endpoint
+app.get('/auth/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
+});
+        // Update success redirect
+
 
 // Routes
 app.get('/', (req, res) => {
@@ -215,6 +228,20 @@ app.get('/test', (req, res) => {
         message: 'Ghost Town Backend is running!',
         time: new Date().toISOString()
     });
+});
+
+// Add user info endpoint
+app.get('/api/user', (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json({ error: 'Not authenticated' });
+    }
+    res.json(req.session.user);
+});
+
+// Add logout endpoint
+app.get('/auth/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 3000;
