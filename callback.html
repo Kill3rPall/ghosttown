@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Authenticating...</title>
+    <title>جاري تسجيل الدخول...</title>
+    <meta charset="UTF-8">
     <style>
         body {
             font-family: 'Tajawal', Arial, sans-serif;
@@ -12,9 +13,14 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            direction: rtl;
         }
         .loading {
             text-align: center;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
         }
         .spinner {
             width: 50px;
@@ -34,22 +40,31 @@
 <body>
     <div class="loading">
         <div class="spinner"></div>
-        <p>جاري تسجيل الدخول...</p>
+        <p>جاري تسجيل الدخول عبر Discord...</p>
     </div>
 
     <script>
         // Get the code from URL
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
+        const error = urlParams.get('error');
         
-        if (code) {
-            // Store the code temporarily
+        if (error) {
+            // Handle error
+            console.error('Discord auth error:', error);
+            window.location.href = '/ghosttown/index.html';
+        } else if (code) {
+            // Store auth code
             localStorage.setItem('discord_code', code);
-            // Redirect to home page with correct path
-            window.location.href = '/ghosttown/home.html';
+            localStorage.setItem('auth_time', Date.now());
+            
+            // Redirect to home page
+            setTimeout(() => {
+                window.location.href = '/ghosttown/home.html';
+            }, 1000);
         } else {
-            // If no code, redirect to login with correct path
-            window.location.href = '/ghosttown/index.html?error=no_code';
+            // No code or error, redirect to login
+            window.location.href = '/ghosttown/index.html';
         }
     </script>
 </body>
