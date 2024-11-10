@@ -1,22 +1,23 @@
 import express from 'express';
 import session from 'express-session';
 import fetch from 'node-fetch';
-import dotenv from 'dotenv';
 import cors from 'cors';
-
-dotenv.config();
 
 const app = express();
 
-// Constants for URLs
+// Constants
 const FRONTEND_URL = 'https://ghosttown.up.railway.app';
-const BACKEND_URL = 'https://ghosttown.up.railway.app';
 
 // Enable CORS
 app.use(cors({
-    origin: BACKEND_URL,
-    credentials: true
+    origin: 'https://ghosttown.up.railway.app',
+    credentials: true,
+    methods: ['GET', 'POST', 'OPTIONS']
 }));
+
+// Parse JSON bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Session middleware
 app.use(session({
@@ -32,21 +33,30 @@ app.use(session({
 // Discord OAuth2 configuration
 const DISCORD_CLIENT_ID = '742443364091166793';
 const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
-const REDIRECT_URI = `${BACKEND_URL}/auth/discord/callback`;
+const REDIRECT_URI = 'https://ghosttown.up.railway.app/auth/discord/callback';
+
+// Test route
+app.get('/', (req, res) => {
+    res.send('Ghost Town Backend is running!');
+});
 
 // Discord login route
 app.get('/auth/discord', (req, res) => {
-    console.log('Auth route hit');
-    const params = new URLSearchParams({
-        client_id: DISCORD_CLIENT_ID,
-        redirect_uri: REDIRECT_URI,
-        response_type: 'code',
-        scope: 'identify email'
-    });
+    try {
+        const params = new URLSearchParams({
+            client_id: DISCORD_CLIENT_ID,
+            redirect_uri: REDIRECT_URI,
+            response_type: 'code',
+            scope: 'identify email'
+        }).toString();
 
-    const discordUrl = `https://discord.com/api/oauth2/authorize?${params}`;
-    console.log('Redirecting to:', discordUrl);
-    res.redirect(discordUrl);
+        const discordAuthUrl = `https://discord.com/api/oauth2/authorize?${params}`;
+        console.log('Redirecting to Discord:', discordAuthUrl);
+        res.redirect(discordAuthUrl);
+    } catch (error) {
+        console.error('Auth Route Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
 
 // Discord callback route
@@ -54,7 +64,6 @@ app.get('/auth/discord/callback', async (req, res) => {
     const { code } = req.query;
     
     if (!code) {
-        console.log('No code received');
         return res.redirect(`${FRONTEND_URL}?error=no_code`);
     }
 
@@ -67,7 +76,6 @@ app.get('/auth/discord/callback', async (req, res) => {
             redirect_uri: REDIRECT_URI
         });
 
-        console.log('Exchanging code for token...');
         const tokenResponse = await fetch('https://discord.com/api/oauth2/token', {
             method: 'POST',
             body: params,
@@ -76,30 +84,17 @@ app.get('/auth/discord/callback', async (req, res) => {
             }
         });
 
-        if (!tokenResponse.ok) {
-            const error = await tokenResponse.text();
-            console.error('Token Error:', error);
-            return res.redirect(`${FRONTEND_URL}?error=token_error`);
-        }
-
         const tokens = await tokenResponse.json();
-        console.log('Token received');
-
+        
         const userResponse = await fetch('https://discord.com/api/users/@me', {
             headers: {
                 Authorization: `Bearer ${tokens.access_token}`
             }
         });
-
-        if (!userResponse.ok) {
-            console.error('User Error:', await userResponse.text());
-            return res.redirect(`${FRONTEND_URL}?error=user_error`);
-        }
-
+        
         const user = await userResponse.json();
-        console.log('User data received:', user.username);
-
         req.session.user = user;
+        
         await sendDiscordWebhook(user, req);
         
         res.redirect(`${FRONTEND_URL}/home.html`);
@@ -121,11 +116,6 @@ app.get('/api/user', (req, res) => {
 app.get('/auth/logout', (req, res) => {
     req.session.destroy();
     res.json({ success: true });
-});
-
-// Test route
-app.get('/', (req, res) => {
-    res.send('Ghost Town Backend is running!');
 });
 
 // Webhook function
